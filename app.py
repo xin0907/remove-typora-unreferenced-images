@@ -39,16 +39,22 @@ def get_images_from_assets(assets_folder):
 
 
 def delete_unreferenced_images(assets_folder, unreferenced_images):
+    removed_count = 0
     for image in unreferenced_images:
         image_path = os.path.join(assets_folder, image)
         if os.path.exists(image_path):
             # Move file to trash instead of deleting permanently
             send2trash(image_path)
             print(f"Moved to trash: {image_path}")
+            removed_count += 1
+    return removed_count
 
 
 def process_folder(folder):
-    for root, dirs, files in os.walk(folder):
+    total_removed = 0
+    for root, dirs, files in os.walk(folder, topdown=True):
+        if '.git' in dirs:
+            dirs.remove('.git')  # 在 topdown 模式下移除 .git 文件夹
         for dir in dirs:
             if 'assets' in dir:
                 assets_folder = os.path.join(root, dir)
@@ -58,15 +64,16 @@ def process_folder(folder):
                     all_images = get_images_from_assets(assets_folder)
 
                     unreferenced_images = all_images - image_references
-
                     if unreferenced_images:
                         print(
                             f"Unreferenced images in {assets_folder} to be moved to trash: {unreferenced_images}")
-                        delete_unreferenced_images(
+                        removed_count = delete_unreferenced_images(
                             assets_folder, unreferenced_images)
+                        total_removed += removed_count
                     else:
                         print(
                             f"No unreferenced images found in {assets_folder}")
+    print(f"Total removed images: {total_removed}")
 
 
 if __name__ == "__main__":
